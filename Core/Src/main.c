@@ -1,21 +1,4 @@
-  4У1144У 4У4 4У1Ы4 4  44		4444444  44444444У																																																																																																																																																																																		44У41 1111111111111111111                                                                                                                                                                                                                                                                                                                                                                        41 1	1 14 1 4УУ88 уё ёё                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ёёёёёёёёё ёёёёёёёёёё                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 	ёёёёёёёёёыууууууууууууууууууууууууууууууууууууууяёёёёёёёёёёёёёёёёёёёёёёёёёёёяёёёёёёёёёёёёёёёёёёёяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяяууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууууяяяяя                                                                                                                                                                                                                                                                                                                                                                                            4                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        ы874у ЁЯЫ 4УЯ           4УЫ84УУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУУ                                                                                                                                                                                                                                                                                                      48вё ё                                                                                                                                                                       4ё ёёё                                                                                                                                                                                    ё ёёёёёёёёёёёёё                                                                                                                                                                                                                           ё ёёёё ё  ё              ёёёёёёёёёё ёёё                     ё ё          ё      4ё ё ёёёёёёёёёёёёёёёёёёёё          ё     ё ё4уёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёёё ё ё/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
@@ -87,7 +70,14 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-
+enum states {
+	init,
+	goDown,
+	goUp,
+	stayDown,
+	stayUp
+};
+enum states curState = init;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -146,15 +136,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 	HAL_Delay(4000);
 
-//HAL_UART_Receive_IT(&huart3, bufer, 8); 
-//write(GENERAL_ADDR,GENERAL_DATA);
-//HAL_Delay(1000);
-//write(VACTUAL_ADDR, VACTUAL_DATA);
-//HAL_Delay(1000);
-//write(0x6C, 0b001110000000000000001
-//HAL_Delay(2000);
-//HAL_UART_Transmit_IT(&huart2, bufer1, 7);
-  /* USER CODE END 2 */
+
 if(HAL_GPIO_ReadPin(datTop_GPIO_Port, datTop_Pin)== 0)
 {
 	dir= DIR_DOWN;
@@ -168,9 +150,89 @@ HAL_TIM_Base_Start_IT(&htim2);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */}
   while (1)
-  {
+  { 
 	//	HAL_UART_Receive_IT(&huart3, bufer, 8); 
 		//HAL_UART_Transmit_IT(&huart3, bufer1, 1);
+		switch (curState) {
+			case init:
+				{
+					curState = goUp;
+					break;
+				}
+			case goUp:
+				{
+					if(HAL_GPIO_ReadPin(datTop_GPIO_Port, datTop_Pin)== DAT_OFF)
+					{
+						HAL_GPIO_WritePin(dir_GPIO_Port, dir_Pin, DIR_UP);
+						HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON);
+					}
+					else
+					{
+						curState = stayUp;
+						stepCount=0;
+					}
+					break;
+				}
+			case stayUp:
+			{
+				if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_ON)
+				{
+					curState = goDown;
+				}
+				else 
+				{
+					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF);
+				}
+				break;			
+			}
+			case goDown:
+			{
+				if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_OFF)
+				{
+					curState = goUp;
+				}
+				else{
+					if (stepCount<botPos)
+					{
+						HAL_GPIO_WritePin(dir_GPIO_Port, dir_Pin, DIR_DOWN);
+						HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON);
+					}
+					else {
+						curState = stayDown;
+					}				
+				}
+				break;
+			case stayDown:
+			{
+				if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_OFF)
+				{
+					curState = goUp;
+				}
+				else{
+					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF);
+				}
+				if (HAL_GPIO_ReadPin(knDown_GPIO_Port, knDown_Pin) == BUTTON_ON)
+				{
+					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON); //
+					HAL_Delay(100);
+					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF); //
+				}
+				
+				if ((HAL_GPIO_ReadPin(knUp_GPIO_Port, knUp_Pin) == BUTTON_ON)&&(HAL_GPIO_ReadPin(datTop_GPIO_Port, datTop_Pin)== DAT_OFF))//
+				{
+					HAL_GPIO_WritePin(dir_GPIO_Port, dir_Pin, DIR_UP);
+					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON); //
+					HAL_Delay(100);
+					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF); //
+					HAL_GPIO_WritePin(dir_GPIO_Port, dir_Pin, DIR_DOWN);
+				}
+				break;
+			}
+			}
+				
+				
+				
+		}
 		
 		if((HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_ON)&&(topFlag==1)) //проектор включен и срабатывал верхний датчик
 			{ 
