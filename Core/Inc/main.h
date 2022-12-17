@@ -70,7 +70,7 @@ void Error_Handler(void);
 #define datTop_GPIO_Port GPIOC
 #define datBot_Pin GPIO_PIN_0
 #define datBot_GPIO_Port GPIOC
-#define proj_Pin GPIO_PIN_0
+#define proj_Pin GPIO_PIN_1
 #define proj_GPIO_Port GPIOA
 #define enable_Pin GPIO_PIN_9
 #define enable_GPIO_Port GPIOA

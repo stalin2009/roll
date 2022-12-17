@@ -1,19 +1,7 @@
 
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
 #define ENABLE_ON 0
 #define ENABLE_OFF 1
 #define DIR_UP 0
@@ -25,29 +13,13 @@
 #define BUTTON_ON 0
 #define BUTTON_OFF 1
 
-//#define ENABLE_ON 1
-//#define ENABLE_ON 1
-/* USER CODE END PD */
 
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim2;
 
-/* USER CODE BEGIN PV */
-uint8_t   TMC2208_SYNC =  0x05;
-uint8_t  TMC_WRITE  = 0x80;
-uint8_t  topFlag = 0; 
 uint32_t stepCount=0;
-uint8_t GENERAL_ADDR = 0x00;
+
 uint32_t botPos=14000000;
-uint8_t bufer[8]={0,0,0,0,0,0,0};
-uint8_t bufer1[7]={0x45,0x67,0x78,0x90,0xab,0xcd,0xef};
-uint8_t VACTUAL_ADDR = 0x22;
-uint32_t VACTUAL_DATA = 0b11111111;
+
 uint8_t runCount=0;
 
 int resetCount   =    0;
@@ -60,16 +32,14 @@ int speed=10;
 
 int upSpeed = 200;
 int downSpeed = 200;
-int botFlag = 0; // ?�?�?�?? ?????�?�?�?�?�???�?????? ?????�???�???? ?????�?�?�?????�, 1- ?�?�?�?? ?????�?�?�?�?�???�?????�
-int dir = 0; //???�?????�???�?�?????� ?????�?�?�??????, 1 = ?????�???�;
-int en = 0; //???�?�???�?�?�?????� ?????�?�?�??????
-/* USER CODE END PV */
+int botFlag = 0; 
+int dir = 0; 
+int en = 0; 
 
-/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
-/* USER CODE BEGIN PFP */
+
 enum states {
 	init,
 	goDown,
@@ -78,14 +48,10 @@ enum states {
 	stayUp
 };
 enum states curState = init;
-/* USER CODE END PFP */
 
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	//if(htim -> Instance == TIM2)
-	//{
+
 		if (resetCount >= (resetValue))
 		{
 			resetCount = 0;
@@ -99,60 +65,32 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		{
 			resetCount++;
 		}
-	//}
+
 }
 
-/* USER CODE END 0 */
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
 int main(void)
 {
-  {/* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  
   HAL_Init();
 
-  /* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM2_Init();
-  /* USER CODE BEGIN 2 */
+
 	HAL_Delay(4000);
 
-
-if(HAL_GPIO_ReadPin(datTop_GPIO_Port, datTop_Pin)== 0)
-{
-	dir= DIR_DOWN;
-	en=0;
-					HAL_GPIO_WritePin(dir_GPIO_Port, dir_Pin, DIR_DOWN);
-
-	HAL_GPIO_WritePin(enable_GPIO_Port,enable_Pin, ENABLE_OFF);
-	topFlag=1;
-}
 HAL_TIM_Base_Start_IT(&htim2);
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */}
+  
+		/* Infinite loop _-----------------------------------------------------------------------*/
+
   while (1)
   { 
-	//	HAL_UART_Receive_IT(&huart3, bufer, 8); 
-		//HAL_UART_Transmit_IT(&huart3, bufer1, 1);
+	
 		switch (curState) {
 			case init:
 				{
@@ -168,8 +106,9 @@ HAL_TIM_Base_Start_IT(&htim2);
 					}
 					else
 					{
+						HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF);
 						curState = stayUp;
-						stepCount=0;
+						
 					}
 					break;
 				}
@@ -177,11 +116,14 @@ HAL_TIM_Base_Start_IT(&htim2);
 			{
 				if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_ON)
 				{
-					curState = goDown;
-				}
-				else 
-				{
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF);
+					HAL_Delay(500);
+					if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_ON)
+					{
+						curState = goDown;
+						runCount = 1; //zapuskaem schetchik wniz
+					}
+					else
+						break;
 				}
 				break;			
 			}
@@ -189,7 +131,13 @@ HAL_TIM_Base_Start_IT(&htim2);
 			{
 				if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_OFF)
 				{
-					curState = goUp;
+					HAL_Delay(1000);
+					if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_OFF)
+					{
+						curState = goUp;
+						runCount =0;
+						stepCount=0;
+					}
 				}
 				else{
 					if (stepCount<botPos)
@@ -198,19 +146,27 @@ HAL_TIM_Base_Start_IT(&htim2);
 						HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON);
 					}
 					else {
+							HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF);
 						curState = stayDown;
+						runCount=0;
+						
 					}				
 				}
 				break;
+			}
 			case stayDown:
 			{
 				if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_OFF)
 				{
-					curState = goUp;
+					HAL_Delay(1000);
+					if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_OFF)
+					{
+						curState = goUp;
+						runCount =0;
+						stepCount=0;
+					}
 				}
-				else{
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF);
-				}
+			
 				if (HAL_GPIO_ReadPin(knDown_GPIO_Port, knDown_Pin) == BUTTON_ON)
 				{
 					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON); //
@@ -229,116 +185,22 @@ HAL_TIM_Base_Start_IT(&htim2);
 				break;
 			}
 			}
-				
-				
-				
+			
 		}
-		
-		if((HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_ON)&&(topFlag==1)) //проектор включен и срабатывал верхний датчик
-			{ 
-			if (dir == DIR_UP)//направление было вверх
-			{
-				dir = DIR_DOWN;
-				HAL_GPIO_WritePin(dir_GPIO_Port, dir_Pin, DIR_DOWN);
-			
-			}
-			runCount =1;
-			if(botFlag == 0) // нижний датчик не срабатывал
-			{
-				if(/*HAL_GPIO_ReadPin(datBot_GPIO_Port,datBot_Pin) == DAT_ON*/stepCount>=botPos) //приехали вниз
-				{
-					botFlag = 1;
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF); //тормозим 
-					en = 0;
-					runCount=0;//стоп счетчик
-				}
-				else
-				{
-					if(en == 0 )
-					{
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON); //
-						en = 1;
-					}
-				}
-			}
-			else //
-			{
-				if (HAL_GPIO_ReadPin(knDown_GPIO_Port, knDown_Pin) == BUTTON_ON)
-				{
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON); //
-					HAL_Delay(100);
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF); //
-				}
-				
-				if ((HAL_GPIO_ReadPin(knUp_GPIO_Port, knUp_Pin) == BUTTON_ON)&&(HAL_GPIO_ReadPin(datTop_GPIO_Port, datTop_Pin)== DAT_OFF))//
-				{
-					HAL_GPIO_WritePin(dir_GPIO_Port, dir_Pin, DIR_UP);
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON); //
-					HAL_Delay(100);
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF); //
-					HAL_GPIO_WritePin(dir_GPIO_Port, dir_Pin, DIR_DOWN);
-				}
-			}
-			
-		
-	}
-		else //
-		{
-			HAL_Delay(1000);
-			if(HAL_GPIO_ReadPin(proj_GPIO_Port, proj_Pin) == PROJ_ON)//ждем секунду, если проектор включен пропускаем цикл
-			{
-				continue;
-			}
-			if (dir == DIR_DOWN)//если  было направление вниз
-			{
-				dir = DIR_UP;
-				HAL_GPIO_WritePin(dir_GPIO_Port, dir_Pin, DIR_UP); //переключаем крутить вверх
-				botFlag  = 0 ; //
-								
-			}
-			
-			if(HAL_GPIO_ReadPin(datTop_GPIO_Port, datTop_Pin)== DAT_OFF)// 
-			{topFlag=0;
-				if (en == 0)
-				{
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_ON); //
-					en = 1;
-				}
-			}
-			else //
-			{
-				if (en == 1)
-				{
-					topFlag=1;
-					stepCount=0;
-					HAL_GPIO_WritePin(enable_GPIO_Port, enable_Pin, ENABLE_OFF);// 
-					en = 0;
-				}
-			}
-		}
-    /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
 }
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Configure the main internal regulator output voltage
-  */
+ 
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -366,24 +228,15 @@ void SystemClock_Config(void)
   }
 }
 
-/**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
+
 static void MX_TIM2_Init(void)
 {
 
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
 
-  /* USER CODE BEGIN TIM2_Init 1 */
 
-  /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = delitel;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -405,17 +258,10 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
 
 }
 
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -476,45 +322,10 @@ static void MX_GPIO_Init(void)
 
 }
 
-/* USER CODE BEGIN 4 */
-//uint8_t calcCRC(uint8_t datagram[], uint8_t len) {
-//     uint8_t crc = 0;
-//     for (uint8_t i = 0; i < len; i++) {
-//         uint8_t currentByte = datagram[i];
-//         for (uint8_t j = 0; j < 8; j++) {
-//             if ((crc >> 7) ^ (currentByte & 0x01)) {
-//                 crc = (crc << 1) ^ 0x07;
-//             } else {
-//                 crc = (crc << 1);
-//             }
-//             crc &= 0xff;
-//             currentByte = currentByte >> 1;
-//         }
-//     }
-//     return crc;
-// }
   
 
-// void write(uint8_t addr, uint32_t regVal) {
-//     uint8_t len = 7;
-//     addr |= TMC_WRITE;
-//     uint8_t datagram[] = {TMC2208_SYNC, slave_address, addr, (uint8_t)(regVal>>24), (uint8_t)(regVal>>16), (uint8_t)(regVal>>8), (uint8_t)(regVal>>0), 0x00};
-//  
-//     datagram[len] = calcCRC(datagram, len);
 
-//              
-//							
-//							while(HAL_UART_Transmit_IT(&huart3, datagram, len) == HAL_BUSY);// ждем готовность и отправяем в uart
-//        
-//     HAL_Delay(100);
-// }
-  
-/* USER CODE END 4 */
 
-/**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
